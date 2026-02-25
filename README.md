@@ -1,6 +1,6 @@
 # 👻 FocusGhost
 
-Pomodoro tekniği ile çalışma sürenizi takip edin, her tamamlanan seans bahçenize bir çiçek eklesin.
+Pomodoro tekniği ile çalışma sürenizi takip edin, seans esnasında Ghost animasyonu size eşlik etsin. Projelerinizi ve görevlerinize ne kadar vakit harcadığınızı takip ederek deadline tahminlerinizi daha iyi yapın.
 
 ## ✨ Özellikler
 
