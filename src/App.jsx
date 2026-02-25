@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import posthog from "posthog-js";
 import {
   THEMES, ThemeCtx, useT,
   ACTIVITY_MODES, getModeColor,
@@ -656,6 +657,55 @@ function TaskLogGroup({ taskId, taskName, logs, projects, theme }) {
   );
 }
 
+// ── Feedback Modal ────────────────────────────────────────────────────────────
+function FeedbackModal({ onClose }) {
+  const T = useT();
+  const [copied, setCopied] = useState(false);
+  const MAIL = "dincerbnur@gmail.com";
+
+  const copyEmail = () => {
+    navigator.clipboard.writeText(MAIL).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.65)",backdropFilter:"blur(6px)"}}
+      onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{background:T.bg,border:`1px solid ${T.borderLight}`,borderRadius:24,padding:"28px 24px",width:"90%",maxWidth:360,boxShadow:"0 32px 80px rgba(0,0,0,0.6)",animation:"popIn 0.4s cubic-bezier(0.34,1.56,0.64,1)",textAlign:"center"}}>
+
+        <div style={{fontSize:40,marginBottom:12}}>💬</div>
+        <div style={{fontSize:18,fontWeight:800,color:T.text,marginBottom:6}}>Geri Bildirim</div>
+        <div style={{fontSize:13,color:T.textMuted,fontWeight:500,lineHeight:1.7,marginBottom:22}}>
+          Öneri, hata bildirimi veya düşünceleriniz için bize mail atabilirsiniz:
+        </div>
+
+        {/* Email kutusu */}
+        <div style={{display:"flex",alignItems:"center",gap:8,background:T.glass,border:`1px solid ${T.border}`,borderRadius:14,padding:"10px 14px",marginBottom:18}}>
+          <span style={{fontSize:13,fontWeight:700,color:T.lavender,flex:1,textAlign:"left",wordBreak:"break-all"}}>{MAIL}</span>
+          <button onClick={copyEmail} title="Kopyala"
+            style={{flexShrink:0,background:"none",border:"none",cursor:"pointer",color:copied?T.mint:T.textMuted,fontSize:18,lineHeight:1,padding:2,transition:"color 0.2s"}}>
+            {copied ? "✓" : "⎘"}
+          </button>
+        </div>
+
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={onClose}
+            style={{flex:1,background:T.glass,border:`1px solid ${T.border}`,borderRadius:12,padding:"10px",fontSize:13,fontWeight:600,color:T.textMuted,cursor:"pointer"}}>
+            Kapat
+          </button>
+          <a href={`mailto:${MAIL}?subject=${encodeURIComponent("FocusGhost Geri Bildirim")}`}
+            onClick={()=>posthog.capture("feedback_mailto_clicked")}
+            style={{flex:2,background:T.lavender+"22",border:`1px solid ${T.lavender}44`,borderRadius:12,padding:"10px",fontSize:13,fontWeight:700,color:T.lavender,cursor:"pointer",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+            ✉️ Mail At
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Weekly Bar Chart ──────────────────────────────────────────────────────────
 function WeeklyBarChart({ timeLogs, T }) {
   const days = Array.from({length:7},(_,i)=>{
@@ -1235,6 +1285,7 @@ export default function App() {
   const [kanbanProjId, setKanbanProjId] = useState(null);
   const [showPlantPicker, setShowPlantPicker] = useState(false);
   const [pendingPlantInfo, setPendingPlantInfo] = useState(null); // { projectId, plantedAt, activityMode }
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // Tasks
   const [tasks, setTasks]           = useLocalStorage("fg_tasks", [
@@ -1330,6 +1381,15 @@ export default function App() {
     };
     setTimeLogs(prev => [log, ...prev]);
 
+    // Analytics
+    posthog.capture(completed ? "pomodoro_completed" : "pomodoro_interrupted", {
+      activity_mode: actMode,
+      planned_sec: plannedDuration,
+      actual_sec: actualDuration,
+      has_task: !!activeTask,
+      has_project: !!activeProjectId,
+    });
+
     // Update task pomos if completed
     if (completed && activeTask) {
       setTasks(prev => prev.map(t => t.id===activeTask.id ? {...t, pomos: t.pomos+1} : t));
@@ -1345,6 +1405,13 @@ export default function App() {
       if (!sessionStartRef.current) {
         sessionStartRef.current = new Date();
         sessionStartRem.current = remaining;
+        posthog.capture("timer_started", {
+          activity_mode: actMode,
+          duration_min: Math.round(remaining / 60),
+          has_task: !!activeTask,
+          has_project: !!activeProjectId,
+          theme,
+        });
       }
       intervalRef.current = setInterval(() => {
         setRemaining(r => {
@@ -1428,7 +1495,7 @@ export default function App() {
 // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e) => {
-      if (e.target.tagName === "INPUT") return;
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
       if (e.key === "f" || e.key === "F") toggleBrowserFS();
       if (e.key === " ") { e.preventDefault(); running ? pauseTimer() : setRunning(true); }
     };
@@ -1734,6 +1801,7 @@ export default function App() {
         @keyframes soundBar4{from{height:3px}to{height:8px}}
         @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
         @keyframes popIn{from{opacity:0;transform:scale(0.2)}to{opacity:1;transform:scale(1)}}
+        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         input[type=range]{-webkit-appearance:none;background:${T.border};border-radius:4px;outline:none}
         input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:${T.lavender};cursor:pointer;box-shadow:0 0 6px ${T.lavender}99}
       `}</style>
@@ -1782,6 +1850,11 @@ export default function App() {
                   {tab===key && <div style={{marginLeft:"auto",width:5,height:5,borderRadius:"50%",background:cfg.color}}/>}
                 </button>
               ))}
+              {/* Geri Bildirim */}
+              <button onClick={()=>setShowFeedback(true)} style={{width:"100%",border:`1px solid ${T.border}`,cursor:"pointer",borderRadius:12,background:"transparent",padding:"10px 14px",display:"flex",alignItems:"center",gap:10,marginTop:8,color:T.textSoft,fontSize:13,fontWeight:500,transition:"all 0.2s",textAlign:"left"}}>
+                <span style={{fontSize:18,width:22,textAlign:"center"}}>💬</span>
+                <span>Geri Bildirim</span>
+              </button>
             </div>
 
             {/* Active session + project / garden info */}
@@ -2275,6 +2348,8 @@ export default function App() {
             />
           )}
 
+          {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)}/>}
+
           {/* Project modal */}
           {showProjectModal && (
             <Modal title={editingProject?"Projeyi Düzenle":"Yeni Proje"} onClose={()=>{setShowProjectModal(false);setEditingProject(null);}}>
@@ -2385,6 +2460,9 @@ export default function App() {
           <div style={{height:72,display:"flex",alignItems:"flex-end",justifyContent:"space-between",padding:"0 28px 10px",flexShrink:0,fontSize:13,fontWeight:700,color:T.textSoft,position:"relative",zIndex:2}}>
             <span>{clock}</span>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <button onClick={()=>setShowFeedback(true)} style={{background:"rgba(255,255,255,0.07)",border:`1px solid ${T.border}`,borderRadius:20,padding:"4px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"all 0.3s",color:T.textSoft,fontSize:11,fontWeight:700}}>
+                <span style={{fontSize:14}}>💬</span>
+              </button>
               <button onClick={()=>setTheme(t=>t==="dark"?"light":"dark")} style={{background:theme==="dark"?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.07)",border:`1px solid ${T.border}`,borderRadius:20,padding:"4px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,transition:"all 0.3s",color:T.textSoft,fontSize:11,fontWeight:700}}>
                 <span style={{fontSize:14}}>{theme==="dark"?"🌙":"☀️"}</span>
                 <span>{theme==="dark"?"Koyu":"Açık"}</span>
@@ -2777,6 +2855,9 @@ export default function App() {
               theme={theme}
             />
           )}
+
+          {/* ── FEEDBACK MODAL (mobile) ── */}
+          {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)}/>}
 
           {/* ── PROJECT MODAL ── */}
           {showProjectModal && (
