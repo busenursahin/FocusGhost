@@ -26,6 +26,7 @@ import { ProjectCard } from "./components/ProjectCard.jsx";
 import { TaskLogGroup } from "./components/TaskLogGroup.jsx";
 import { PlantPickerModal } from "./components/PlantPickerModal.jsx";
 import { FeedbackModal } from "./components/FeedbackModal.jsx";
+import DrawBoard from "./components/drawboard/DrawBoard.jsx";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN APP
@@ -276,11 +277,11 @@ export default function App() {
     const onKey = (e) => {
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
       if (e.key === "f" || e.key === "F") toggleBrowserFS();
-      if (e.key === " ") { e.preventDefault(); running ? pauseTimer() : setRunning(true); }
+      if (e.key === " " && tab !== "drawboard") { e.preventDefault(); running ? pauseTimer() : setRunning(true); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggleBrowserFS, running, pauseTimer]);
+  }, [toggleBrowserFS, running, pauseTimer, tab]);
 
 
   const resetTimer = useCallback(() => {
@@ -622,6 +623,7 @@ export default function App() {
                 {icon:"🕐",label:"Kayıtlar",key:"logs"},
                 {icon:"📊",label:"İstatistik",key:"stats"},
                 {icon:"🌱",label:"Bahçem",key:"garden"},
+                {icon:"✏️",label:"Tahta",key:"drawboard"},
               ].map(({icon,label,key})=>(
                 <button key={key} onClick={()=>setTab(key)} style={{width:"100%",border:"none",cursor:"pointer",borderRadius:12,background:tab===key?cfg.color+"18":"transparent",padding:"10px 14px",display:"flex",alignItems:"center",gap:10,marginBottom:3,color:tab===key?cfg.color:T.textSoft,fontSize:13,fontWeight:tab===key?700:500,outline:tab===key?`1px solid ${cfg.color}33`:"none",transition:"all 0.2s",textAlign:"left"}}>
                   <span style={{fontSize:18,width:22,textAlign:"center"}}>{icon}</span>
@@ -744,6 +746,7 @@ export default function App() {
                   {tab==="logs"&&"🕐 Zaman Kayıtları"}
                   {tab==="stats"&&"📊 İstatistikler"}
                   {tab==="garden"&&"🌱 Bahçem"}
+                  {tab==="drawboard"&&"✏️ Tahta"}
                 </div>
               </div>
               {/* Running pill */}
@@ -1098,6 +1101,11 @@ export default function App() {
             {/* ── GARDEN TAB (desktop) ── */}
             {tab==="garden" && (
               <GardenView plants={gardenPlants} projects={projects} T={T} theme={theme} big/>
+            )}
+
+            {/* ── DRAWBOARD TAB (desktop) ── */}
+            {tab==="drawboard" && (
+              <DrawBoard T={T} theme={theme}/>
             )}
           </div>
 
@@ -1610,6 +1618,11 @@ export default function App() {
             <GardenView plants={gardenPlants} projects={projects} T={T} theme={theme}/>
           )}
 
+          {/* ── DRAWBOARD TAB (mobile) ── */}
+          {tab==="drawboard" && (
+            <DrawBoard T={T} theme={theme}/>
+          )}
+
           {/* Bottom Nav */}
           <div style={{background:T.navBg,backdropFilter:"blur(20px)",borderTop:`1px solid ${T.border}`,display:"flex",padding:"10px 12px 20px",gap:2,flexShrink:0}}>
             {[
@@ -1618,6 +1631,7 @@ export default function App() {
               {icon:"🕐",label:"Kayıtlar",key:"logs"},
               {icon:"📊",label:"İstatistik",key:"stats"},
               {icon:"🌱",label:"Bahçe",key:"garden"},
+              {icon:"✏️",label:"Tahta",key:"drawboard"},
             ].map(({icon,label,key})=>(
               <button key={key} onClick={()=>setTab(key)} style={{flex:1,border:"none",cursor:"pointer",borderRadius:16,background:tab===key?cfg.color+"18":"transparent",padding:"8px 4px",display:"flex",flexDirection:"column",alignItems:"center",gap:2,transition:"all 0.2s"}}>
                 <span style={{fontSize:18}}>{icon}</span>
