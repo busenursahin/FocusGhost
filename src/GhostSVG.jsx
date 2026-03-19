@@ -173,6 +173,60 @@ export function GhostCode({ running, color, big }) {
   );
 }
 
+// ── Tahta: Ghost drawing on a board ───────────────────────────────────────────
+export function GhostDraw({ running, color, big }) {
+  const [frame,setFrame]=useState(0); const [blink,setBlink]=useState(false);
+  const [penX,setPenX]=useState(0); const [penRow,setPenRow]=useState(0);
+  const [shapeOpacity,setShapeOpacity]=useState(0);
+  useEffect(()=>{ if(!running)return; const t=setInterval(()=>setFrame(f=>(f+1)%4),550); return()=>clearInterval(t); },[running]);
+  useEffect(()=>{ const b=()=>{ setBlink(true); setTimeout(()=>setBlink(false),140); setTimeout(b,3500+Math.random()*2000); }; const t=setTimeout(b,1600); return()=>clearTimeout(t); },[]);
+  useEffect(()=>{ if(!running)return; let x=0,row=0,dir=1; const t=setInterval(()=>{
+    x+=dir*2; if(x>22){dir=-1;} if(x<0){dir=1;x=0;row=(row+1)%3;setShapeOpacity(o=>Math.min(1,o+0.35));}
+    setPenX(x); setPenRow(row);
+  },70); return()=>clearInterval(t); },[running]);
+  const bobY=running?[0,-2,0,2][frame]:0; const sc=big?1.7:1;
+  return (
+    <svg width={110*sc} height={115*sc} viewBox="0 0 110 115" style={{filter:`drop-shadow(0 0 ${big?22:12}px ${color}66)`,transform:`translateY(${bobY}px)`,transition:"transform 0.5s ease",flexShrink:0}}>
+      {/* Whiteboard */}
+      {running&&<>
+        <rect x="4" y="68" width="68" height="36" rx="3" fill="#f8f6ff" stroke={color} strokeWidth="1" opacity="0.92"/>
+        <rect x="4" y="68" width="68" height="5" rx="3" fill={color} opacity="0.2"/>
+        {/* A small drawn rect shape */}
+        <rect x="10" y="76" width="14" height="10" rx="1.5" fill="none" stroke={color} strokeWidth="1.2" opacity={shapeOpacity*0.7}/>
+        {/* Lines of text/drawing */}
+        <line x1="30" y1="79" x2={30+(penRow===0?penX:22)} y2="79" stroke={color} strokeWidth="1.2" opacity="0.75" strokeLinecap="round"/>
+        <line x1="30" y1="83" x2={30+(penRow<=1?penX:22)} y2="83" stroke={color} strokeWidth="1.2" opacity="0.6" strokeLinecap="round"/>
+        <line x1="30" y1="87" x2={30+(penRow<=2?penX:0)} y2="87" stroke={color} strokeWidth="1.2" opacity="0.45" strokeLinecap="round"/>
+        {/* Marker tray */}
+        <rect x="4" y="103" width="68" height="3" rx="1" fill={color} opacity="0.18"/>
+        <rect x="10" y="100" width="3" height="3" rx="1" fill="#ff7eb3" opacity="0.6"/>
+        <rect x="15" y="100" width="3" height="3" rx="1" fill="#7eb3ff" opacity="0.6"/>
+        <rect x="20" y="100" width="3" height="3" rx="1" fill={color} opacity="0.6"/>
+      </>}
+      <g transform="translate(14,0)">
+        <GhostBase bobY={bobY} blink={blink} running={running}>
+          {/* Arms */}
+          {running&&<>
+            <path d="M10 54 Q2 58 6 68" fill="none" stroke="rgba(240,236,255,0.9)" strokeWidth="9" strokeLinecap="round"/>
+            <path d="M60 52 Q68 48 64 42" fill="none" stroke="rgba(240,236,255,0.9)" strokeWidth="9" strokeLinecap="round"/>
+          </>}
+          {/* Marker in right hand, moving with pen */}
+          {running&&<g transform={`translate(${penX-4},8) rotate(-20,0,78)`}>
+            <rect x="-2" y="66" width="4.5" height="17" rx="1.5" fill="#7eb3ff"/>
+            <rect x="-2" y="66" width="4.5" height="4" rx="1" fill="#5590e8"/>
+            <polygon points="-2,83 2.5,83 0.25,89" fill="#5590e8"/>
+          </g>}
+        </GhostBase>
+      </g>
+      {/* Floating sparkles when drawing */}
+      {running&&<>
+        <text x="80" y={32-frame*2} fontSize="9" fill={color} opacity={0.6-frame*0.1} style={{transition:"all 0.5s"}}>✦</text>
+        <text x="88" y={24-frame*1.5} fontSize="7" fill={color} opacity={0.4-frame*0.08} style={{transition:"all 0.5s"}}>✧</text>
+      </>}
+    </svg>
+  );
+}
+
 // ── Ghost router ───────────────────────────────────────────────────────────────
 export function Ghost({ activityMode, running, color, big }) {
   if (activityMode==="read")     return <GhostRead running={running} color={color} big={big}/>;
